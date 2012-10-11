@@ -690,9 +690,9 @@ class YOURSCreator
 				<div id="yourls-admin-about" class="postbox yours-sidebox">
 					<h3 class="hndle" id="about-sidebar"><?php _e('About the Plugin') ?></h3>
 					<div class="inside">
-						<p>Talk to <a href="http://twitter.com/norcross" target="_blank">@norcross</a> on twitter or visit the <a href="http://wordpress.org/support/plugin//" target="_blank">plugin support form</a> for bugs or feature requests.</p>
+						<p>Talk to <a href="http://twitter.com/norcross" target="_blank">@norcross</a> on twitter or visit the <a href="http://wordpress.org/support/plugin/yourls-link-creator" target="_blank">plugin support form</a> for bugs or feature requests.</p>
 						<p><?php _e('<strong>Enjoy the plugin?</strong>') ?><br />
-						<a href="http://twitter.com/?status=I'm using @norcross's YOURLS AJAX plugin - check it out! http://l.norc.co/yajax/" target="_blank"><?php _e('Tweet about it') ?></a> <?php _e('and consider donating.') ?></p>
+						<a href="http://twitter.com/?status=I'm using @norcross's YOURLS Link Creator plugin - check it out! http://l.norc.co/yourls/" target="_blank"><?php _e('Tweet about it') ?></a> <?php _e('and consider donating.') ?></p>
 						<p><?php _e('<strong>Donate:</strong> A lot of hard work goes into building plugins - support your open source developers. Include your twitter username and I\'ll send you a shout out for your generosity. Thank you!') ?><br />
 						<form action="https://www.paypal.com/cgi-bin/webscr" method="post" target="_blank">
 						<input type="hidden" name="cmd" value="_s-xclick">
@@ -726,9 +726,10 @@ class YOURSCreator
 					<h3 class="hndle" id="links-sidebar"><?php _e('Links:') ?></h3>
 					<div class="inside">
 						<ul>
-						<li><a href="http://wordpress.org/extend/plugins//" target="_blank">Plugin on WP.org</a></li>
-						<li><a href="https://github.com/norcross/r" target="_blank">Plugin on GitHub</a></li>
-						<li><a href="http://wordpress.org/support/plugin/" target="_blank">Support Forum</a><li>
+						<li><a href="http://yours.org/" target="_blank">YOURLS Homepage</a></li>
+						<li><a href="http://wordpress.org/extend/plugins/yourls-link-creator/" target="_blank">Plugin on WP.org</a></li>
+						<li><a href="https://github.com/norcross/yourls-link-creator" target="_blank">Plugin on GitHub</a></li>
+						<li><a href="http://wordpress.org/support/plugin/yourls-link-creator/" target="_blank">Support Forum</a><li>
             			</ul>
 					</div>
 				</div>
