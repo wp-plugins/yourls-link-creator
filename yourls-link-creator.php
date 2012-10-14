@@ -3,7 +3,7 @@
 Plugin Name: YOURLS Link Creator
 Plugin URI: http://andrewnorcross.com/plugins/
 Description: Creates a shortlink using YOURLS and stores as postmeta.
-Version: 1.0
+Version: 1.01
 Author: Andrew Norcross
 Author URI: http://andrewnorcross.com
 
@@ -24,13 +24,13 @@ Author URI: http://andrewnorcross.com
 */ 
 
 // Start up the engine 
-class YOURSCreator
+class YOURLSCreator
 {
 	
 	/**
 	 * This is our constructor
 	 *
-	 * @return YOURSCreator
+	 * @return YOURLSCreator
 	 */
 	public function __construct() {
 		add_action		( 'admin_enqueue_scripts',		array( $this, 'scripts_styles'		), 10		);
@@ -42,6 +42,7 @@ class YOURSCreator
 		add_action		( 'wp_ajax_clicks_yourls',		array( $this, 'clicks_yourls'		)			);
 		add_action		( 'manage_posts_custom_column',	array( $this, 'display_columns'		), 10,	2	);
 		add_action		( 'yourls_cron',				array( $this, 'yourls_click_cron'	)			);
+		add_action		( 'save_post',					array( $this, 'yourls_on_save'		) 			);
 		add_filter		( 'manage_posts_columns',		array( $this, 'register_columns'	)			);
 		add_filter		( 'get_shortlink',				array( $this, 'yourls_shortlink'	), 10,	3	);
 		add_filter		( 'plugin_action_links',		array( $this, 'quick_link'			), 10,	2	);
@@ -54,7 +55,7 @@ class YOURSCreator
 	/**
 	 * Scripts and stylesheets
 	 *
-	 * @return YOURSCreator
+	 * @return YOURLSCreator
 	 */
 
 	public function scripts_styles($hook) {
@@ -80,7 +81,7 @@ class YOURSCreator
 	/**
 	 * show settings link on plugins page
 	 *
-	 * @return YOURSCreator
+	 * @return YOURLSCreator
 	 */
 
     public function quick_link( $links, $file ) {
@@ -168,9 +169,66 @@ class YOURSCreator
 	}
 
 	/**
+	 * Create bit.ly link on publish if one doesn't exist
+	 *
+	 * @return YOURLSCreator
+	 */
+
+	public function yourls_on_save($post_id) {
+
+		// only fire when settings have been filled out
+		$yourls_options = get_option('yourls_options');
+
+		if(	empty($yourls_options['api']) || empty($yourls_options['url']) )
+			return;
+
+		// bail if user hasn't checked the box
+		if(	!isset($yourls_options['sav']) )
+			return;
+
+		//verify post is not a revision
+		if ( wp_is_post_revision( $post_id ) )
+			return;
+
+		// check for a link			
+		$exist	= get_post_meta( $post_id, '_yourls_url', true );
+		
+		if (!empty($exist) )
+			return;
+
+		// process YOURLS call
+		$clean_url	= str_replace('http://', '', $yourls_options['url']);
+	
+		$yourls		= 'http://'.$clean_url.'/yourls-api.php';
+		$api_key	= $yourls_options['api'];
+		$action		= 'shorturl';
+		$format		= 'JSON';
+		$post_url	= get_permalink($post_id);
+	
+		$yourls_r	= $yourls.'?signature='.$api_key.'&action='.$action.'&url='.$post_url.'&format='.$format.'';
+			
+		$response	= wp_remote_get( $yourls_r );	
+
+		// error. bail.
+		if( is_wp_error( $response ) )
+			return;
+		
+		// parse values
+		$data		= $response['body'];
+
+		// no URL on return. bail
+		if(!$data)
+			return;
+
+		// everything worked, so make a link
+		update_post_meta($post_id, '_yourls_url', $data);
+
+	}
+
+	/**
 	 * Create shortlink function. Called on ajax
 	 *
-	 * @return YOURSCreator
+	 * @return YOURLSCreator
 	 */
 
 	public function create_yourls (){
@@ -246,7 +304,7 @@ class YOURSCreator
 	/**
 	 * retireve stats
 	 *
-	 * @return YOURSCreator
+	 * @return YOURLSCreator
 	 */
 
 	public function stats_yourls() {
@@ -318,7 +376,7 @@ class YOURSCreator
 	/**
 	 * run update job to get click counts via manual ajax
 	 *
-	 * @return YOURSCreator
+	 * @return YOURLSCreator
 	 */
 
 	public function clicks_yourls() {
@@ -340,7 +398,7 @@ class YOURSCreator
 
 		$ret = array();
 
-		if($yourls_count == false) {
+		if($yourls_count === false) {
 			$ret['success'] = false;
 			$ret['error']	= 'No posts to check.';
 			$ret['errcode']	= 'NOPOSTS';
@@ -348,7 +406,7 @@ class YOURSCreator
 			die();
 		}
 
-		foreach ($yourls_posts as $post) : setup_postdata($post);
+		foreach ($yourls_posts as $post) :
 
 			$yourls_url = get_post_meta($post, '_yourls_url', true);
 			$clean_url	= str_replace('http://', '', $yourls_options['url']);
@@ -373,7 +431,10 @@ class YOURSCreator
 			$raw_data	= $response['body'];
 			$data		= json_decode($raw_data);
 
-			if($data){
+			if(!$data)
+				return;
+
+			if(isset($data->link)) {
 				$linkdata	= $data->link;
 				$clicks		= $linkdata->clicks;
 				update_post_meta($post, '_yourls_clicks', $clicks);
@@ -391,7 +452,7 @@ class YOURSCreator
 	/**
 	 * scheduling for YOURLS cron jobs
 	 *
-	 * @return YOURSCreator
+	 * @return YOURLSCreator
 	 */
 
 	public function schedule_cron() {
@@ -408,7 +469,7 @@ class YOURSCreator
 	/**
 	 * run update job to get click counts via cron
 	 *
-	 * @return YOURSCreator
+	 * @return YOURLSCreator
 	 */
 
 	public function yourls_click_cron() {
@@ -464,7 +525,7 @@ class YOURSCreator
 	/**
 	 * build out settings page and meta boxes
 	 *
-	 * @return YOURSCreator
+	 * @return YOURLSCreator
 	 */
 
 	public function yourls_settings() {
@@ -474,7 +535,7 @@ class YOURSCreator
 	/**
 	 * display metabox
 	 *
-	 * @return YOURSCreator
+	 * @return YOURLSCreator
 	 */
 
 	public function metabox_yourls( $page, $context ) {
@@ -494,14 +555,14 @@ class YOURSCreator
 		$types		= isset($yourls_options['cpt'])	? array_merge($customs, $builtin) : $builtin;
     	
 		if ( in_array( $page,  $types ) && 'side' == $context )
-			add_meta_box('yours-post-display', __('YOURLS Shortlink'), array(&$this, 'yours_post_display'), $page, $context, 'high');
+			add_meta_box('yourls-post-display', __('YOURLS Shortlink'), array(&$this, 'yourls_post_display'), $page, $context, 'high');
 	}
 
 
 	/**
 	 * Register settings
 	 *
-	 * @return YOURSCreator
+	 * @return YOURLSCreator
 	 */
 
 
@@ -513,10 +574,10 @@ class YOURSCreator
 	/**
 	 * Display YOURLS shortlink if present
 	 *
-	 * @return YOURSCreator
+	 * @return YOURLSCreator
 	 */
 
-	public function yours_post_display() {
+	public function yourls_post_display() {
 	
 		global $post;
 		$yourls_link	= get_post_meta($post->ID, '_yourls_url', true);
@@ -549,7 +610,7 @@ class YOURSCreator
 	/**
 	 * Filter wp_shortlink with new YOURLS link
 	 *
-	 * @return YOURSCreator
+	 * @return YOURLSCreator
 	 */
 
 	public function yourls_shortlink($shortlink, $id, $context) {
@@ -592,7 +653,7 @@ class YOURSCreator
 	/**
 	 * Display main options page structure
 	 *
-	 * @return YOURSCreator
+	 * @return YOURLSCreator
 	 */
 	 
 	public function yourls_settings_display() {
@@ -622,11 +683,12 @@ class YOURSCreator
 
 				$yourls_url		= (isset($yourls_options['url'])	? $yourls_options['url']	: ''		);
 				$yourls_api		= (isset($yourls_options['api'])	? $yourls_options['api']	: ''		);
+				$yourls_sav		= (isset($yourls_options['sav'])	? $yourls_options['sav']	: 'false'	);
 				$yourls_cpt		= (isset($yourls_options['cpt'])	? $yourls_options['cpt']	: 'false'	);
 				$yourls_sht		= (isset($yourls_options['sht'])	? $yourls_options['sht']	: 'false'	);
 				?>
 
-                <table class="form-table yours-table">
+                <table class="form-table yourls-table">
 				<tbody>
                 	<tr>
                         <th><label for="yourls_options[url]"><?php _e('YOURLS Custom URL') ?></label></th>
@@ -641,6 +703,14 @@ class YOURSCreator
                         <td>
 						<input type="text" class="regular-text" value="<?php echo $yourls_api; ?>" id="yourls_api" name="yourls_options[api]">
                         <p class="description"><?php _e('Found in the tools section on your YOURLS admin page.') ?></p>
+						</td>
+                    </tr>
+
+                	<tr>
+                        <th><label for="yourls_options[sav]"><?php _e('Auto generate links') ?></label></th>
+                        <td>
+						<input type="checkbox" name="yourls_options[sav]" id="yourls_sav" value="true" <?php checked( $yourls_sav, 'true' ); ?> />
+                        <span class="description"><?php _e('Create a YOURLS link whenever a post is saved.') ?></span>
 						</td>
                     </tr>
 
@@ -680,17 +750,17 @@ class YOURSCreator
      *
      * this is just to keep the area cleaner 
      *
-     * @return YOURSCreator
+     * @return YOURLSCreator
      */
 
     public function settings_side() { ?>
 
 		<div id="side-info-column" class="inner-sidebar">
 			<div class="meta-box-sortables">
-				<div id="yourls-admin-about" class="postbox yours-sidebox">
+				<div id="yourls-admin-about" class="postbox yourls-sidebox">
 					<h3 class="hndle" id="about-sidebar"><?php _e('About the Plugin') ?></h3>
 					<div class="inside">
-						<p>Talk to <a href="http://twitter.com/norcross" target="_blank">@norcross</a> on twitter or visit the <a href="http://wordpress.org/support/plugin/yourls-link-creator" target="_blank">plugin support form</a> for bugs or feature requests.</p>
+						<p>Talk to <a href="http://twitter.com/norcross" target="_blank">@norcross</a> on twitter or visit the <a href="http://wordpress.org/support/plugin/yourls-link-creator/" target="_blank">plugin support form</a> for bugs or feature requests.</p>
 						<p><?php _e('<strong>Enjoy the plugin?</strong>') ?><br />
 						<a href="http://twitter.com/?status=I'm using @norcross's YOURLS Link Creator plugin - check it out! http://l.norc.co/yourls/" target="_blank"><?php _e('Tweet about it') ?></a> <?php _e('and consider donating.') ?></p>
 						<p><?php _e('<strong>Donate:</strong> A lot of hard work goes into building plugins - support your open source developers. Include your twitter username and I\'ll send you a shout out for your generosity. Thank you!') ?><br />
@@ -705,30 +775,30 @@ class YOURSCreator
 			</div>
 
 			<div class="meta-box-sortables">
-				<div id="yourls-data-refresh" class="postbox yours-sidebox">
+				<div id="yourls-data-refresh" class="postbox yourls-sidebox">
 					<h3 class="hndle" id="data-sidebar"><?php _e('Data Options:') ?></h3>
 					<div class="inside">
 						<p>Click the button below to refresh the click count data for all posts with a YOURLS link.</p>
-						<input type="button" class="yours-click-updates button-secondary" value="Refresh Click Counts" >
+						<input type="button" class="yourls-click-updates button-secondary" value="Refresh Click Counts" >
 						<img class="ajax-loading btn-yourls" src="<?php echo plugins_url('/lib/img/wpspin-light.gif', __FILE__); ?>" >
 
 <!--					the YOURLS API doesn't support a way just check for a URL or not.
 						<hr />
 						<p>Click the button below to check for existing YOURLS data for your site content.</p>
-						<input type="button" class="yours-import button-secondary" value="Import YOURLS data" >
+						<input type="button" class="yourls-import button-secondary" value="Import YOURLS data" >
 -->						
 					</div>
 				</div>
 			</div>
 			
 			<div class="meta-box-sortables">
-				<div id="yourls-admin-more" class="postbox yours-sidebox">
+				<div id="yourls-admin-more" class="postbox yourls-sidebox">
 					<h3 class="hndle" id="links-sidebar"><?php _e('Links:') ?></h3>
 					<div class="inside">
 						<ul>
-						<li><a href="http://yours.org/" target="_blank">YOURLS Homepage</a></li>
+						<li><a href="http://yourls.org/" target="_blank">YOURLS homepage</a></li>
 						<li><a href="http://wordpress.org/extend/plugins/yourls-link-creator/" target="_blank">Plugin on WP.org</a></li>
-						<li><a href="https://github.com/norcross/yourls-link-creator" target="_blank">Plugin on GitHub</a></li>
+						<li><a href="https://github.com/norcross/yourls-link-creator/" target="_blank">Plugin on GitHub</a></li>
 						<li><a href="http://wordpress.org/support/plugin/yourls-link-creator/" target="_blank">Support Forum</a><li>
             			</ul>
 					</div>
@@ -765,4 +835,4 @@ class YOURSCreator
 
 
 // Instantiate our class
-$YOURSCreator = new YOURSCreator();
+$YOURLSCreator = new YOURLSCreator();
