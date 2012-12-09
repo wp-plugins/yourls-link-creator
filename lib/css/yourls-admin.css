@@ -2,11 +2,11 @@
 div#icon-yourls {
 	background:url(../img/yourls-icon.png) no-repeat 0 0;
 }
-	
+
 table.yourls-table {
 	margin:0 0 30px 0;
 }
-		
+
 div.yourls-form-text {
 	margin:0 0 20px 0;
 }
@@ -21,10 +21,26 @@ div.yourls-sidebox hr {
     border-bottom: 1px solid rgba(255, 255, 255, 0.3);
 }
 
+table.yourls-table {}
+
+table.yourls-table tr.secondary th,
+table.yourls-table tr.secondary td {
+	padding: 10px 0 10px 20px;
+}
+
+table.yourls-table tr.secondary th label {
+	color: #666666;
+	font-style: italic;
+}
+
+table.yourls-table tr.secondary td span {
+	margin: 0 10px 0 0;
+}
+
 /* post table */
 
-table th#yourls-click, 
-table tfoot th.column-yourls-click, 
+table th#yourls-click,
+table tfoot th.column-yourls-click,
 table td.yourls-click {
 	width:65px;
 	text-align:center;
