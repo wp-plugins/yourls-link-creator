@@ -3,7 +3,7 @@
 Plugin Name: YOURLS Link Creator
 Plugin URI: http://andrewnorcross.com/plugins/
 Description: Creates a shortlink using YOURLS and stores as postmeta.
-Version: 1.03
+Version: 1.04
 Author: Andrew Norcross
 Author URI: http://andrewnorcross.com
 
@@ -43,9 +43,11 @@ class YOURLSCreator
 		add_action		( 'wp_ajax_clicks_yourls',		array( $this, 'clicks_yourls'		)			);
 		add_action		( 'yourls_cron',				array( $this, 'yourls_click_cron'	)			);
 		add_action		( 'save_post',					array( $this, 'yourls_on_save'		) 			);
+		add_action		( 'wp_head',					array( $this, 'shortlink_meta'		) 			);
 		add_action		( 'manage_posts_custom_column',	array( $this, 'display_columns'		), 10,	2	);
 		add_filter		( 'manage_posts_columns',		array( $this, 'register_columns'	)			);
 		add_filter		( 'get_shortlink',				array( $this, 'yourls_shortlink'	), 10,	3	);
+		add_filter		( 'pre_get_shortlink',			array( $this, 'shortlink_button'	), 2,	2	);
 		add_filter		( 'plugin_action_links',		array( $this, 'quick_link'			), 10,	2	);
 
 		register_activation_hook			( __FILE__, array( $this, 'schedule_cron'		)			);
@@ -130,7 +132,7 @@ class YOURLSCreator
 		$yourls_options = get_option('yourls_options');
 
 		$customs	= $yourls_options['typ'];
-		$builtin	= array('post' => 'post');
+		$builtin	= array('post' => 'post', 'page' => 'page');
 		$types		= !empty($yourls_options['typ']) ? array_merge($customs, $builtin) : $builtin;
 		$screen		= $current_screen->post_type;
 
@@ -152,7 +154,7 @@ class YOURLSCreator
 		$yourls_options = get_option('yourls_options');
 
 		$customs	= isset($yourls_options['typ']) ? $yourls_options['typ'] : false;
-		$builtin	= array('post' => 'post');
+		$builtin	= array('post' => 'post', 'page' => 'page');
 
 		$types		= $customs !== false ? array_merge($customs, $builtin) : $builtin;
 		$screen		= $current_screen->post_type;
@@ -562,7 +564,7 @@ class YOURLSCreator
 			return;
 
 		$customs	= isset($yourls_options['typ']) ? $yourls_options['typ'] : false;
-		$builtin	= array('post' => 'post');
+		$builtin	= array('post' => 'post', 'page' => 'page');
 
 		$types		= $customs !== false ? array_merge($customs, $builtin) : $builtin;
 
@@ -620,6 +622,37 @@ class YOURLSCreator
 	}
 
 	/**
+	 * Display the button on the backend
+	 *
+	 * @return YOURLSCreator
+	 */
+
+	public function shortlink_button($shortlink, $id) {
+
+		// check options to see if it's enabled
+		$yourls_options = get_option('yourls_options');
+
+		if(	!isset($yourls_options['sht']) )
+			return $shortlink;
+
+		$post = get_post($id);
+
+		// bail if nothing there
+		if(empty($post))
+			return $shortlink;
+
+		// check existing postmeta for YOURLS
+		$yourls_link = get_post_meta($id, '_yourls_url', true);
+
+		// bail if no YOURLS is present
+		if(empty($yourls_link))
+			return $shortlink;
+
+		// we got this far? good. send it out
+	    return $yourls_link;
+	}
+
+	/**
 	 * Filter wp_shortlink with new YOURLS link
 	 *
 	 * @return YOURLSCreator
@@ -663,6 +696,36 @@ class YOURLSCreator
 	}
 
 	/**
+	 * add shortlink into head if present
+	 *
+	 * @return YOURLSCreator
+	 */
+
+	public function shortlink_meta() {
+
+		// no shortlinks exist on non-singular items, so bail
+		if (!is_singular() )
+			return;
+
+		// check options to see if it's enabled
+		$yourls_options = get_option('yourls_options');
+
+		if(	!isset($yourls_options['sht']) )
+			return;
+
+		global $post;
+
+		// check existing postmeta for YOURLS
+		$yourls_link = get_post_meta($post->ID, '_yourls_url', true);
+
+		// got a YOURLS? well then add it
+		if(!empty($yourls_link))
+			echo '<link href="'.esc_url($yourls_link).'" rel="shortlink">';
+
+
+	}
+
+	/**
 	 * Post type helper
 	 *
 	 * @return YOURLSCreator
@@ -679,6 +742,7 @@ class YOURLSCreator
 		$types	= get_post_types($args, $output);
 		// output loop of types
 			$boxes	= '';
+
 			foreach ($types as $type ) {
 				// type variables
 				$name	= $type->name;

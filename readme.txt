@@ -5,7 +5,7 @@ Donate link: https://andrewnorcross.com/donate
 Tags: YOURLS, shortlink, custom URL
 Requires at least: 3.0
 Tested up to: 3.5
-Stable tag: 1.03
+Stable tag: 1.04
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -55,6 +55,9 @@ YOURLS is a self-hosted PHP based application that allows you to make your own c
 
 
 == Changelog ==
+
+= 1.04 =
+* refactoring the wp_shortlink functionality
 
 = 1.03 =
 * Bugfix for post type checking
