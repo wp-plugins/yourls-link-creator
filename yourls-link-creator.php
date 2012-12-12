@@ -3,7 +3,7 @@
 Plugin Name: YOURLS Link Creator
 Plugin URI: http://andrewnorcross.com/plugins/
 Description: Creates a shortlink using YOURLS and stores as postmeta.
-Version: 1.04
+Version: 1.05
 Author: Andrew Norcross
 Author URI: http://andrewnorcross.com
 
@@ -41,6 +41,7 @@ class YOURLSCreator
 		add_action		( 'wp_ajax_create_yourls',		array( $this, 'create_yourls'		)			);
 		add_action		( 'wp_ajax_stats_yourls',		array( $this, 'stats_yourls'		)			);
 		add_action		( 'wp_ajax_clicks_yourls',		array( $this, 'clicks_yourls'		)			);
+		add_action      ( 'wp_ajax_key_change',     	array( $this, 'key_change'      	)			);
 		add_action		( 'yourls_cron',				array( $this, 'yourls_click_cron'	)			);
 		add_action		( 'save_post',					array( $this, 'yourls_on_save'		) 			);
 		add_action		( 'wp_head',					array( $this, 'shortlink_meta'		) 			);
@@ -541,6 +542,53 @@ class YOURLSCreator
 
 	}
 
+    /**
+     * convert from Ozh (and Otto's) plugin
+     *
+     * @return YOURLSCreator
+     */
+
+    public function key_change() {
+
+        // get keys from POST
+        $key_old  = 'yourls_shorturl';
+        $key_new  = '_yourls_url';
+
+        // set up return array for ajax responses
+        $ret = array();
+
+        global $wpdb;
+
+        // run SQL query
+        //SET meta_key = REPLACE (meta_key, '".$key_old."', '".$key_new."'),
+
+        $key_query = $wpdb->query (
+            $wpdb->prepare("
+                UPDATE $wpdb->postmeta
+                SET meta_key = REPLACE (meta_key, %s, %s )",
+                $key_old, $key_new
+            )
+        );
+
+
+        if( $key_query == 0 ) {
+            $ret['success'] = false;
+            $ret['errcode'] = 'KEY_MISSING';
+            $ret['message'] = 'There are no keys to convert.';
+            echo json_encode($ret);
+            die();
+        }
+
+        if( $key_query > 0 ) {
+            $ret['success'] = true;
+            $ret['updated'] = $key_query;
+            $ret['message'] = $key_query.' entries have been updated.';
+            echo json_encode($ret);
+            die();
+        }
+
+    }
+
 	/**
 	 * build out settings page and meta boxes
 	 *
@@ -897,9 +945,12 @@ class YOURLSCreator
 					<div class="inside">
 						<p><?php _e('Click the button below to refresh the click count data for all posts with a YOURLS link.', 'wpyourls'); ?></p>
 
-						<input type="button" class="yourls-click-updates button-secondary" value="<?php _e('Refresh Click Counts', 'wpyourls'); ?>" >
+						<input type="button" class="yourls-click-updates button-primary" value="<?php _e('Refresh Click Counts', 'wpyourls'); ?>" >
 						<img class="ajax-loading btn-yourls" src="<?php echo plugins_url('/lib/img/wpspin-light.gif', __FILE__); ?>" >
-
+						<hr />
+						<p><?php _e('Using Ozh\'s plugin? Click here to convert the existing meta keys', 'wpyourls'); ?></p>
+						<input type="button" class="yourls-convert button-primary" value="<?php _e('Convert Meta Keys', 'wpyourls'); ?>" >
+						<img class="ajax-loading btn-convert" src="<?php echo plugins_url('/lib/img/wpspin-light.gif', __FILE__); ?>" >
 <!--					the YOURLS API doesn't support a way just check for a URL or not.
 						<hr />
 						<p>Click the button below to check for existing YOURLS data for your site content.</p>
