@@ -216,8 +216,24 @@ class YOURLSCreator_Helper
 		// now add our optional args
 		$args   = ! empty( $args ) ? array_merge( $args, $base ) : $base;
 
-		// build the request URL and make the call
-		$build  = wp_remote_get( add_query_arg( $args, self::get_yourls_api_url() ), array( 'timeout' => 30, 'sslverify' => false ) );
+		// if the user selected POST method, use that. otherwise use GET
+		if ( false !== YOURLSCreator_Helper::get_yourls_option( 'cal' ) ) {
+
+			// construct the args for a remote POST
+			$build  = wp_remote_post( self::get_yourls_api_url(), array(
+				'method'    => 'POST',
+				'timeout'   => 45,
+				'sslverify' => false,
+				'body'      => $args,
+			    )
+			);
+		} else {
+			// build the request URL
+			$call   = add_query_arg( $args, self::get_yourls_api_url() );
+
+			// and make the request
+			$build  = wp_remote_get( esc_url( $call ), array( 'timeout' => 30, 'sslverify' => false ) );
+		}
 
 		// bail on empty return
 		if ( empty( $build ) ) {
@@ -240,8 +256,8 @@ class YOURLSCreator_Helper
 		// get our response code
 		$code   = wp_remote_retrieve_response_code( $build );
 
-		// bail on 404 or 500
-		if ( $code === 404 || $code === 500 ) {
+		// bail on a not 200
+		if ( $code !== 200 ) {
 			return array(
 				'success'   => false,
 				'errcode'   => 'RESPONSE_CODE',
@@ -287,6 +303,45 @@ class YOURLSCreator_Helper
 			'success'   => true,
 			'errcode'   => null,
 			'data'      => $data
+		);
+	}
+
+	/**
+	 * make the API call to get the individual click count
+	 *
+	 * @param  integer $post_id [description]
+	 * @return [type]           [description]
+	 */
+	public static function get_single_click_count( $post_id = 0 ) {
+
+		// get the URL
+		$url    = self::get_yourls_meta( $post_id );
+
+		// a secondary check to see if we have the URL
+		if ( empty( $url ) ) {
+			return false;
+		}
+
+		// make the API call
+		$build  = self::run_yourls_api_call( 'url-stats', array( 'shorturl' => esc_url( $url ) ) );
+
+		// bail if empty data or error received
+		if ( empty( $build ) || false === $build['success'] ) {
+			return array(
+				'success'   => false,
+				'errcode'   => 'NO_DATA',
+				'message'   => __( 'No API data was returned.', 'wpyourls' )
+			);
+		}
+
+		// get my click number
+		$count  = is_array( $build ) && ! empty( $build['data']['link']['clicks'] ) ? absint( $build['data']['link']['clicks'] ) : '0';
+
+		// and return
+		return array(
+			'success'   => true,
+			'errcode'   => null,
+			'clicknm'   => $count
 		);
 	}
 
@@ -358,45 +413,6 @@ class YOURLSCreator_Helper
 
 		// and return it
 		return $box;
-	}
-
-	/**
-	 * make the API call to get the individual click count
-	 *
-	 * @param  integer $post_id [description]
-	 * @return [type]           [description]
-	 */
-	public static function get_single_click_count( $post_id = 0 ) {
-
-		// get the URL
-		$url    = self::get_yourls_meta( $post_id );
-
-		// a secondary check to see if we have the URL
-		if ( empty( $url ) ) {
-			return false;
-		}
-
-		// make the API call
-		$build  = self::run_yourls_api_call( 'url-stats', array( 'shorturl' => esc_url( $url ) ) );
-
-		// bail if empty data or error received
-		if ( empty( $build ) || false === $build['success'] ) {
-			return array(
-				'success'   => false,
-				'errcode'   => 'NO_DATA',
-				'message'   => __( 'No API data was returned.', 'wpyourls' )
-			);
-		}
-
-		// get my click number
-		$count  = is_array( $build ) && ! empty( $build['data']['link']['clicks'] ) ? absint( $build['data']['link']['clicks'] ) : '0';
-
-		// and return
-		return array(
-			'success'   => true,
-			'errcode'   => null,
-			'clicknm'   => $count
-		);
 	}
 
 	/**

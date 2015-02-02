@@ -53,20 +53,21 @@ class YOURLSCreator_Settings
 		static $this_plugin;
 
 		if ( ! $this_plugin ) {
-			$this_plugin = plugin_basename(__FILE__);
+			$this_plugin = YOURLS_BASE;
 		}
 
 		// check to make sure we are on the correct plugin
-		if ( $file == $this_plugin ) {
-
-			// buil my link
-			$single = '<a href="' . menu_page_url( 'yourls-settings', 0 ) . '">' . __( 'Settings', 'wpyourls' ) . '</a>';
-
-			// return it
-			array_push( $links, $single );
+		if ( $file != $this_plugin ) {
+			return $links;
 		}
 
-		// return all the links
+		// buil my link
+		$single = '<a href="' . menu_page_url( 'yourls-settings', 0 ) . '">' . __( 'Settings', 'wpyourls' ) . '</a>';
+
+		// get it in the group
+		array_push( $links, $single );
+
+		// return it
 		return $links;
 	}
 
@@ -134,6 +135,11 @@ class YOURLSCreator_Settings
 		// check the boolean for using CPTs
 		if ( ! empty( $data['cpt'] ) ) {
 			$store['cpt']   = true;
+		}
+
+		// check the boolean for using POST method
+		if ( ! empty( $data['cal'] ) ) {
+			$store['cal']   = true;
 		}
 
 		// check the each possible CPT
@@ -273,6 +279,7 @@ class YOURLSCreator_Settings
 				$short  = ! empty( $data['sht'] ) ? true : false;
 				$cpts   = ! empty( $data['cpt'] ) ? true : false;
 				$types  = ! empty( $data['typ'] ) ? (array) $data['typ'] : array();
+				$call   = ! empty( $data['cal'] ) ? true : false;
 
 				// load the settings fields
 				wp_nonce_field( 'yourls_settings_save_nonce', 'yourls_settings_save', false, true );
@@ -323,6 +330,14 @@ class YOURLSCreator_Settings
 					<tr class="secondary yourls-types" style="display:none;">
 						<th><?php _e( 'Select the types to include', 'wpyourls' ); ?></th>
 						<td><?php echo self::post_types( $types ); ?></td>
+					</tr>
+
+					<tr>
+						<th><?php _e( 'Use POST requests', 'wpyourls' ) ?></th>
+						<td class="setting-item">
+							<input type="checkbox" name="yourls-options[cal]" id="yourls-cal" value="true" <?php checked( $call, true ); ?> />
+							<label for="yourls-call"><?php _e( 'Check this box if you are getting API permission errors.', 'wpyourls' ); ?></label>
+						</td>
 					</tr>
 
 				</tbody>

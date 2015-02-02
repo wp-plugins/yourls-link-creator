@@ -100,11 +100,15 @@ class YOURLSCreator_Ajax
 		// check for keyword
 		$keyword    = ! empty( $_POST['keyword'] ) ? esc_sql( $_POST['keyword'] ) : '';
 
-		// get my post URL
+		// get my post URL and title
 		$url    = get_permalink( $post_id );
+		$title  = get_the_title( $post_id );
+
+		// set my args for the API call
+		$args   = array( 'url' => esc_url( $url ), 'title' => esc_attr( $title ), 'keyword' => $keyword );
 
 		// make the API call
-		$build  = YOURLSCreator_Helper::run_yourls_api_call( 'shorturl', array( 'url' => esc_url( $url ), 'keyword' => $keyword ) );
+		$build  = YOURLSCreator_Helper::run_yourls_api_call( 'shorturl', $args );
 
 		// bail if empty data
 		if ( empty( $build ) ) {
@@ -132,6 +136,7 @@ class YOURLSCreator_Ajax
 
 			// update the post meta
 			update_post_meta( $post_id, '_yourls_url', $shorturl );
+			update_post_meta( $post_id, '_yourls_clicks', '0' );
 
 			// and do the API return
 			$ret['success'] = true;
@@ -340,11 +345,15 @@ class YOURLSCreator_Ajax
 			die();
 		}
 
-		// get my post URL
+		// get my post URL and title
 		$url    = get_permalink( $post_id );
+		$title  = get_the_title( $post_id );
+
+		// set my args for the API call
+		$args   = array( 'url' => esc_url( $url ), 'title' => esc_attr( $title ) );
 
 		// make the API call
-		$build  = YOURLSCreator_Helper::run_yourls_api_call( 'shorturl', array( 'url' => esc_url( $url ) ) );
+		$build  = YOURLSCreator_Helper::run_yourls_api_call( 'shorturl', $args );
 
 		// bail if empty data
 		if ( empty( $build ) ) {
@@ -372,6 +381,7 @@ class YOURLSCreator_Ajax
 
 			// update the post meta
 			update_post_meta( $post_id, '_yourls_url', $shorturl );
+			update_post_meta( $post_id, '_yourls_clicks', '0' );
 
 			// and do the API return
 			$ret['success'] = true;
