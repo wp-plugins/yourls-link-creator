@@ -492,7 +492,7 @@ class YOURLSCreator_Helper
 
 		// Bail out if user does not have permissions
 		if ( ! empty( $post_id ) && ! current_user_can( $cap, $post_id ) ) {
-			return $post_id;
+			return true;
 		}
 
 		// return false
