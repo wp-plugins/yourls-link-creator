@@ -297,8 +297,9 @@ class YOURLSCreator_Settings
 
 					<tr>
 						<th><?php _e( 'YOURLS API Signature Key', 'wpyourls' ); ?></th>
-						<td>
-							<input type="password" class="regular-text code" value="<?php echo esc_attr( $api ); ?>" id="yourls-api" name="yourls-options[api]" autocomplete="off">
+						<td class="apikey-field-wrapper">
+							<input type="text" class="regular-text code" value="<?php echo esc_attr( $api ); ?>" id="yourls-api" name="yourls-options[api]" autocomplete="off">
+							<span class="dashicons dashicons-visibility password-toggle"></span>
 							<p class="description"><?php _e('Found in the tools section on your YOURLS admin page.', 'wpyourls') ?></p>
 						</td>
 					</tr>

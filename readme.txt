@@ -5,7 +5,7 @@ Donate link: https://andrewnorcross.com/donate
 Tags: YOURLS, shortlink, custom URL
 Requires at least: 3.6
 Tested up to: 4.1
-Stable tag: 2.0.2
+Stable tag: 2.0.3
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,10 @@ This is a limitation with the YOURLS API, as there is not a method yet to delete
 
 
 == Changelog ==
+
+= 2.0.3 =
+* added API key field show / hide to (hopefully) account for Chrome being aggressive on the field
+* removed 'future' from array of post types to create items on save
 
 = 2.0.2 =
 * fixed bug with creating link on post save

@@ -61,6 +61,11 @@ class YOURLSCreator_Admin
 		$css_sx = defined( 'WP_DEBUG' ) && WP_DEBUG ? '.css' : '.min.css';
 		$js_sx  = defined( 'WP_DEBUG' ) && WP_DEBUG ? '.js' : '.min.js';
 
+		// load the password stuff on just the settings page
+		if ( $hook == 'settings_page_yourls-settings' ) {
+			wp_enqueue_script( 'hideshow', plugins_url( '/js/hideShowPassword' . $js_sx, __FILE__ ) , array( 'jquery' ), '2.0.3', true );
+		}
+
 		// load our files
 		wp_enqueue_style( 'yourls-admin', plugins_url( '/css/yourls-admin' . $css_sx, __FILE__ ), array(), YOURS_VER, 'all' );
 		wp_enqueue_script( 'yourls-admin', plugins_url( '/js/yourls-admin' . $js_sx, __FILE__ ) , array( 'jquery' ), YOURS_VER, true );
@@ -188,7 +193,7 @@ class YOURLSCreator_Admin
 		}
 
 		// bail if we aren't working with a published post
-		if ( ! in_array( get_post_status( $post_id ), array( 'publish', 'future' ) ) ) {
+		if ( 'publish' !== get_post_status( $post_id ) ) {
 			return;
 		}
 
