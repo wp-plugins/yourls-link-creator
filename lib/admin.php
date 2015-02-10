@@ -189,7 +189,7 @@ class YOURLSCreator_Admin
 
 		// run various checks to make sure we aren't doing anything weird
 		if ( YOURLSCreator_Helper::meta_save_check( $post_id ) ) {
-			return $post_id;
+			return;
 		}
 
 		// bail if we aren't working with a published post
@@ -218,14 +218,14 @@ class YOURLSCreator_Admin
 		}
 
 		// get my post URL and title
-		$url    = get_permalink( $post_id );
+		$url    = YOURLSCreator_Helper::prepare_api_link( $post_id );
 		$title  = get_the_title( $post_id );
 
 		// and optional keyword
-		$keywd  = ! empty( $_POST['yourls-keyw'] ) ? sanitize_text_field( $_POST['yourls-keyw'] ) : '';
+		$keywd  = ! empty( $_POST['yourls-keyw'] ) ? YOURLSCreator_Helper::prepare_api_keyword( $_POST['yourls-keyw'] ) : '';
 
 		// set my args for the API call
-		$args   = array( 'url' => esc_url( $url ), 'title' => esc_attr( $title ), 'keyword' => $keywd );
+		$args   = array( 'url' => esc_url( $url ), 'title' => sanitize_text_field( $title ), 'keyword' => $keywd );
 
 		// make the API call
 		$build  = YOURLSCreator_Helper::run_yourls_api_call( 'shorturl', $args );
@@ -300,6 +300,11 @@ class YOURLSCreator_Admin
 
 		// make sure we're working with an approved post type
 		if ( ! in_array( $post->post_type, YOURLSCreator_Helper::get_yourls_types() ) ) {
+			return $actions;
+		}
+
+		// bail if we aren't working with a published post
+		if ( 'publish' !== get_post_status( $post->ID ) ) {
 			return $actions;
 		}
 
