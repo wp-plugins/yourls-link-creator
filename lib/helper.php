@@ -152,13 +152,21 @@ class YOURLSCreator_Helper
 	public static function get_yourls_api_url() {
 
 		// fetch the stored base URL link
-		$base   = self::get_yourls_api_data( 'url' );
+		$stored = self::get_yourls_api_data( 'url' );
 
 		// parse the link
-		$data   = parse_url( esc_url( $base ) );
+		$parsed = parse_url( esc_url( $stored ) );
+
+		// build the base URL again
+		$base   = $parsed['scheme'] . '://' . $parsed['host'];
+
+		// check for a subfolder and add the path if it exists
+		if ( ! empty( $parsed['path'] ) ) {
+			$base   = self::strip_trailing_slash( $base ) . $parsed['path'];
+		}
 
 		// build the API link
-		$link   = $data['scheme'] . '://' . $data['host'] . '/yourls-api.php';
+		$link   = self::strip_trailing_slash( $base ) . '/yourls-api.php';
 
 		// return it with optional filter
 		return apply_filters( 'yourls_api_url', $link );
@@ -574,13 +582,12 @@ class YOURLSCreator_Helper
 
 	/**
 	 * fetch the permalink from a post ID and return it
-	 * with the trailing slash removed
+	 * with optional trailing slash removed
 	 *
 	 * @param  integer $post_id [description]
-	 * @param  boolean $strip   [description]
 	 * @return [type]           [description]
 	 */
-	public static function prepare_api_link( $post_id = 0, $strip = true ) {
+	public static function prepare_api_link( $post_id = 0 ) {
 
 		// bail without a link
 		if ( empty( $post_id ) ) {
@@ -594,6 +601,9 @@ class YOURLSCreator_Helper
 		if ( empty( $link ) ) {
 			return false;
 		}
+
+		// filter the strip check
+		$strip  = apply_filters( 'yourls_strip_urls', false, $post_id );
 
 		// return the URL stripped (or not)
 		return false !== $strip ? self::strip_trailing_slash( $link ) : $link;

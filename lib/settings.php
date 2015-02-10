@@ -114,7 +114,7 @@ class YOURLSCreator_Settings
 
 		// check and sanitize the URL
 		if ( ! empty( $data['url'] ) ) {
-			$store['url']   = esc_url( $data['url'] );
+			$store['url']   = esc_url( YOURLSCreator_Helper::strip_trailing_slash( $data['url'] ) );
 		}
 
 		// check and sanitize the API key
