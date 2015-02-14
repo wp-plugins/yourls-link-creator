@@ -97,6 +97,21 @@ class YOURLSCreator_Helper
 	}
 
 	/**
+	 * get the post statuses allowed
+	 * @return [type] [description]
+	 */
+	public static function get_yourls_status( $action = '' ) {
+
+		// return only publish for saving
+		if ( ! empty( $action ) && $action == 'save' ) {
+			return apply_filters( 'yourls_post_status', array( 'publish' ), $action  );
+		}
+
+		// return the default
+		return apply_filters( 'yourls_post_status', array( 'publish', 'future' ), $action );
+	}
+
+	/**
 	 * get the two components of the API and return
 	 * them (or one if key is provided)
 	 *
@@ -157,6 +172,11 @@ class YOURLSCreator_Helper
 		// parse the link
 		$parsed = parse_url( esc_url( $stored ) );
 
+		// bail if its too malformed or our pieces are missing
+		if ( ! $parsed || empty( $parsed['scheme'] ) || empty( $parsed['host'] ) ) {
+			return false;
+		}
+
 		// build the base URL again
 		$base   = $parsed['scheme'] . '://' . $parsed['host'];
 
@@ -180,7 +200,7 @@ class YOURLSCreator_Helper
 	 * @param  string $format [description]
 	 * @return [type]         [description]
 	 */
-	public static function run_yourls_api_call( $action = '', $args = array(), $format = 'json', $decode = true ) {
+	public static function run_yourls_api_call( $action = '', $args = array(), $user = true, $format = 'json', $decode = true ) {
 
 		// bail if no action is passed
 		if ( empty( $action ) ) {
@@ -210,7 +230,7 @@ class YOURLSCreator_Helper
 		}
 
 		// only fire if user has the option
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( false !== $user && ! current_user_can( 'manage_options' ) ) {
 			return array(
 				'success'   => false,
 				'errcode'   => 'INVALID_USER',
@@ -228,9 +248,13 @@ class YOURLSCreator_Helper
 		$build  = wp_remote_post( self::get_yourls_api_url(), array(
 			'method'       => 'POST',
 			'timeout'      => 45,
+			'redirection'  => 5,
 			'sslverify'    => false,
-			'httpversion'  => '1.1',
+			'httpversion'  => '1.0',
+			'blocking'     => true,
+			'headers'      => array(),
 			'body'         => $args,
+			'cookies'      => array()
 			)
 		);
 
@@ -303,6 +327,60 @@ class YOURLSCreator_Helper
 			'errcode'   => null,
 			'data'      => $data
 		);
+	}
+
+	/**
+	 * run the API call for getting a single short URL
+	 *
+	 * @param  integer $post_id [description]
+	 * @return [type]           [description]
+	 */
+	public static function get_single_shorturl( $post_id = 0, $check = 'sav' ) {
+
+		// make sure we're working with an approved post type
+		if ( ! in_array( get_post_type( $post_id ), self::get_yourls_types() ) ) {
+			return;
+		}
+
+		// bail if the API key or URL have not been entered
+		if(	false === $api = self::get_yourls_api_data() ) {
+			return;
+		}
+
+		// bail if user hasn't checked the box
+		if ( false === $onschd = self::get_yourls_option( $check ) ) {
+		   	return;
+		}
+
+		// check for a link and bail if one exists
+		if ( false !== $exist = self::get_yourls_meta( $post_id ) ) {
+			return;
+		}
+
+		// get my post URL and title
+		$url    = self::prepare_api_link( $post_id );
+		$title  = get_the_title( $post_id );
+
+		// set my args for the API call
+		$args   = array( 'url' => esc_url( $url ), 'title' => sanitize_text_field( $title ) );
+
+		// make the API call
+		$build  = self::run_yourls_api_call( 'shorturl', $args, false );
+
+		// bail if empty data or error received
+		if ( empty( $build ) || false === $build['success'] ) {
+			return;
+		}
+
+		// we have done our error checking and we are ready to go
+		if( false !== $build['success'] && ! empty( $build['data']['shorturl'] ) ) {
+			// get my short URL
+			$shorturl   = esc_url( $build['data']['shorturl'] );
+
+			// update the post meta
+			update_post_meta( $post_id, '_yourls_url', $shorturl );
+			update_post_meta( $post_id, '_yourls_clicks', '0' );
+		}
 	}
 
 	/**
@@ -570,6 +648,47 @@ class YOURLSCreator_Helper
 	}
 
 	/**
+	 * fetch the API status we checked for
+	 * @return [type] [description]
+	 */
+	public static function get_api_status_data() {
+
+		// fetch the option key we stored
+		if ( false === $check = get_option( 'yourls_api_test' ) ) {
+			return;
+		}
+
+		// set a default data aray
+		$data   = array(
+			'icon'  => '<span class="api-status-icon api-status-icon-unknown"></span>',
+			'text'  => __( 'The status of the YOURLS API could not be determined.', 'wpyourls' )
+		);
+
+		// handle the success
+		if ( $check == 'connect' ) {
+
+			// return the icon and text
+			$data   = array(
+				'icon'  => '<span class="api-status-icon api-status-icon-good"></span>',
+				'text'  => __( 'The YOURLS API is currently accessible.', 'wpyourls' )
+			);
+		}
+
+		// handle the failure
+		if ( $check == 'noconnect' ) {
+
+			// return the icon and text
+			$data   = array(
+				'icon'  => '<span class="api-status-icon api-status-icon-bad"></span>',
+				'text'  => __( 'The YOURLS API is currently NOT accessible.', 'wpyourls' )
+			);
+		}
+
+		// return it
+		return $data;
+	}
+
+	/**
 	 * take a provided keyword (if it exists) and make sure it's
 	 * sanitized properly
 	 *
@@ -633,12 +752,12 @@ class YOURLSCreator_Helper
 			return true;
 		}
 
-		// Bail out if running an ajax/
+		// Bail out if running an ajax
 		if ( defined( 'DOING_AJAX' ) && DOING_AJAX ) {
 			return true;
 		}
 
-		// Bail out if running a cron */
+		// Bail out if running a cron, unless we've skipped that
 		if ( defined( 'DOING_CRON' ) && DOING_CRON ) {
 			return true;
 		}

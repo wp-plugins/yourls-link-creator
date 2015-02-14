@@ -5,7 +5,7 @@ Donate link: https://andrewnorcross.com/donate
 Tags: YOURLS, shortlink, custom URL
 Requires at least: 3.6
 Tested up to: 4.1
-Stable tag: 2.0.5
+Stable tag: 2.0.6
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,12 @@ This is a limitation with the YOURLS API, as there is not a method yet to delete
 
 
 == Changelog ==
+
+= 2.0.6 - 02/13/2015 =
+* added scheduled posts to available post status
+* added `yourls_post_status` filter to modify these (although not sure why you'd want to)
+* added function to create a link when a post is moved from 'scheduled' to 'publish' if one doesn't exist (requires setting update)
+* added API status check sidebox to the settings page
 
 = 2.0.5 - 02/10/2015 =
 * fixed API URL construction to account for installs in a subfolder
